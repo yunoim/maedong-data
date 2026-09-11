@@ -1,0 +1,32 @@
+name: 매일 갱신
+
+# 포털이 전 거래일 마감을 다음 날 오전 11시 30분 전후에 공개하고, 사이트가 그때
+# 갱신된다. 그 뒤에 받아야 최신이다 — 12:40 KST = 03:40 UTC.
+on:
+  schedule:
+    - cron: "40 3 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 공개 API 에서 받기
+        run: python scripts/fetch.py
+      - name: README 표 갱신
+        run: python scripts/readme.py
+      - name: 바뀐 것이 있으면 커밋
+        run: |
+          git config user.name "maedong-bot"
+          git config user.email "noreply@maedong.kr"
+          git add -A
+          git diff --staged --quiet && echo "바뀐 것 없음" && exit 0
+          git commit -m "데이터 갱신 $(cat data/LATEST)"
+          git push
